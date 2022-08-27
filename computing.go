@@ -1,11 +1,13 @@
 package gocompute
 
 import (
+	"bufio"
 	"errors"
 	"github.com/go-gl/gl/v4.3-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"log"
 	"strconv"
+	"strings"
 )
 
 type computeGroup struct {
@@ -13,12 +15,13 @@ type computeGroup struct {
 }
 
 type Computing struct {
-	version        string
-	programCounter int
-	programs       map[int]uint32
-	computeGroups  []computeGroup
-	defines        []string
-	defineNames    []string
+	includeLoader   func(name string) string
+	version         string
+	programCounter  int
+	programs        map[int]uint32
+	maxComputeGroup computeGroup
+	computeGroups   map[int]*computeGroup
+	defineMap       map[string]string
 }
 
 func checkErr(operation string) {
@@ -30,10 +33,15 @@ func checkErr(operation string) {
 }
 func NewComputing(createContext bool) (*Computing, error) {
 	compute := &Computing{}
+	//Disable include loader by default
+	compute.includeLoader = func(dummy string) string {
+		return ""
+	}
+	//Minimal opengl compute version
 	compute.version = "#version 430"
 	compute.programs = make(map[int]uint32)
-	compute.defines = make([]string, 0)
-	compute.defineNames = make([]string, 0)
+	compute.defineMap = make(map[string]string)
+	compute.computeGroups = make(map[int]*computeGroup)
 	if createContext {
 		err := glfw.Init()
 		if err != nil {
@@ -82,8 +90,9 @@ func compileShader(shaderType int, shaderProgram string) (uint32, error) {
 	return shaderHandle, nil
 }
 func (c *Computing) LoadProgram(programText string) (int, error) {
-	c.programCounter++
-	count := c.programCounter - 1
+	count := c.programCounter
+	c.computeGroups[count] = &computeGroup{1, 1, 1}
+	programText = c.preProcess(programText)
 	shaderHandle, err := compileShader(gl.COMPUTE_SHADER, programText)
 	if err != nil {
 		return 0, err
@@ -92,11 +101,11 @@ func (c *Computing) LoadProgram(programText string) (int, error) {
 	gl.AttachShader(program, shaderHandle)
 	gl.LinkProgram(program)
 	c.programs[count] = program
+	c.programCounter++
 	return count, nil
 }
 func (c *Computing) Define(Name string, value string) {
-	c.defines = append(c.defines, value)
-	c.defineNames = append(c.defineNames, Name)
+	c.defineMap[Name] = value
 }
 
 func (c *Computing) DefineInt(Name string, value int) {
@@ -112,22 +121,80 @@ func (c *Computing) DefineDouble(Name string, value float64) {
 }
 
 func (c *Computing) UseProgram(programNumber int) {
-	if len(c.defines) > 0 {
+	if len(c.defineMap) > 0 {
 		log.Println("Warning: using defines with preloaded program")
 	}
 	gl.UseProgram(c.programs[programNumber])
 }
+func (c *Computing) SetIncludeLoader(loader func(name string) string) {
+	if loader != nil {
+		c.includeLoader = loader
+	}
+}
 func (c *Computing) Realize(x, y, z int) {
 	gl.DispatchCompute(uint32(x), uint32(y), uint32(z))
 }
+
 func (c *Computing) UseLoadProgram(programText string) {
-	c.defines = make([]string, 0)
-	c.defineNames = make([]string, 0)
+	c.defineMap = make(map[string]string)
+	programText = c.preProcess(programText)
 	shaderHandle, _ := compileShader(gl.COMPUTE_SHADER, programText)
 	program := gl.CreateProgram()
 	gl.AttachShader(program, shaderHandle)
 	gl.LinkProgram(program)
 }
+
+func (c *Computing) preProcess(computeProgram string) string {
+	scanner := bufio.NewScanner(strings.NewReader(computeProgram))
+	lines := ""
+	versioned := false
+	lineCnt := 0
+	for scanner.Scan() {
+		lineCnt++
+		text := scanner.Text()
+		switch {
+		case strings.Contains(text, "#include"):
+			split := strings.Split(text, " ")
+			text = c.includeLoader(split[len(split)-1])
+		case strings.Contains(text, "#define"):
+			split := strings.Split(text, " ")
+			res := c.defineMap[split[1]]
+			if res != "" {
+				text = "#define " + split[1] + res
+			}
+		case strings.Contains(text, "main()"):
+			text = "" + text
+		case strings.Contains(text, "layout"):
+			input := strings.ReplaceAll(text, " ", "")
+			replacer := strings.NewReplacer("layout(", "", ")in", "", ";", "")
+			input = replacer.Replace(input)
+			inSplit := strings.Split(input, ",")
+			for _, str := range inSplit {
+				nv := strings.Split(str, "=")
+				parsed, err := strconv.ParseInt(nv[len(nv)-1], 10, 64)
+				if err == nil {
+					switch nv[0] {
+					case "local_size_x":
+						c.computeGroups[c.programCounter].X = int(parsed)
+					case "local_size_y":
+						c.computeGroups[c.programCounter].Y = int(parsed)
+					case "local_size_z":
+						c.computeGroups[c.programCounter].Z = int(parsed)
+					}
+				}
+			}
+		case strings.Contains(text, "#version"):
+			versioned = true
+		}
+		lines += text + "\n"
+	}
+	if !versioned {
+		lines = c.version + "\n#line 1\n" + lines
+	}
+	println("lines:" + lines)
+	return lines
+}
+
 func (c *Computing) Close() {
 
 }
