@@ -2,7 +2,6 @@ package gocompute
 
 import (
 	"errors"
-	"fmt"
 	"github.com/go-gl/gl/v4.3-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"log"
@@ -38,7 +37,7 @@ func NewComputing(createContext bool) (*computing, error) {
 	if createContext {
 		err := glfw.Init()
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize glfw: %v", err)
+			return nil, errors.New("failed to initialize glfw: " + err.Error())
 		}
 		glfw.WindowHint(glfw.ContextVersionMajor, 4)
 		glfw.WindowHint(glfw.ContextVersionMinor, 3)
@@ -46,7 +45,7 @@ func NewComputing(createContext bool) (*computing, error) {
 		glfw.WindowHint(glfw.OpenGLForwardCompatible, 1)
 		glfw.WindowHint(glfw.Maximized, glfw.True)
 		glfw.WindowHint(glfw.Visible, glfw.False)
-		window, err := glfw.CreateWindow(1, 1, "computing", nil, nil)
+		window, err := glfw.CreateWindow(1, 1, "Computing", nil, nil)
 		if err != nil {
 			glfw.Terminate()
 			return nil, errors.New("failed to create window: " + err.Error())
