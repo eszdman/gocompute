@@ -19,4 +19,5 @@ void main() {
 	outputValues[idx].xyzw.y = idx;
 	outputValues[idx].xyzw.z = idx;
 	outputValues[idx].xyzw.w = idx;
+	outputValues[idx].xyzw += inputValues[idx].xyzw;
 }

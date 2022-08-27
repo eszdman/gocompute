@@ -50,7 +50,10 @@ func Example2(compute *gocompute.Computing, program int) {
 	buffer := compute.NewBuffer()
 	buffer2 := compute.NewBuffer()
 	gocompute.BufferAllocate[pointsXY](buffer2, 9)
-	gocompute.BufferLoad(buffer, make([]pointsXY, 9))
+	points := make([]pointsXY, 9)
+	points[0].vecX = 0.25
+	points[0].vecY = 0.5
+	gocompute.BufferLoad(buffer, points)
 	buffer.SetBinding(1)
 	buffer2.SetBinding(2)
 	compute.Realize(9, 1, 1)
@@ -62,7 +65,12 @@ func Example3(compute *gocompute.Computing, program int) {
 	buffer := compute.NewBuffer()
 	buffer2 := compute.NewBuffer()
 	gocompute.BufferAllocate[pointsXYZW](buffer2, 9)
-	gocompute.BufferLoad(buffer, make([]pointsXYZW, 9))
+	points := make([]pointsXYZW, 9)
+	points[0].vecX = 0.25
+	points[0].vecY = 0.5
+	points[0].vecZ = 0.75
+	points[0].vecW = 1.0
+	gocompute.BufferLoad(buffer, points)
 	buffer.SetBinding(1)
 	buffer2.SetBinding(2)
 	compute.Realize(9, 1, 1)
