@@ -3,7 +3,6 @@ package gocompute
 import "C"
 import (
 	"github.com/go-gl/gl/v4.3-core/gl"
-	"golang.org/x/exp/constraints"
 	"reflect"
 	"unsafe"
 )
@@ -13,10 +12,10 @@ type gpuBuffer struct {
 	usage uint32
 }
 
-func (c *computing) NewBuffer() gpuBuffer {
+func (c *Computing) NewBuffer() gpuBuffer {
 	return c.NewBufferV(gl.STATIC_DRAW)
 }
-func (c *computing) NewBufferV(usage uint32) gpuBuffer {
+func (c *Computing) NewBufferV(usage uint32) gpuBuffer {
 	buffer := gpuBuffer{}
 	buffer.usage = usage
 	gl.GenBuffers(1, &buffer.id)
@@ -25,29 +24,23 @@ func (c *computing) NewBufferV(usage uint32) gpuBuffer {
 func (b gpuBuffer) Bind() {
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, b.id)
 }
-
-func (b gpuBuffer) Allocate(size int) {
+func tSize[V any]() int {
+	var inType V
+	return int(unsafe.Sizeof(inType))
+}
+func BufferAllocate[V any](b gpuBuffer, size int) {
+	typeSize := tSize[V]()
 	b.Bind()
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size, C.malloc(C.size_t(size)), b.usage)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size*typeSize, C.malloc(C.size_t(size*typeSize)), b.usage)
 	b.UnBind()
 }
-func (b gpuBuffer) AllocateInt32(size int) {
+func BufferLoad[V any](b gpuBuffer, data []V) {
+	typeSize := tSize[V]()
 	b.Bind()
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size*4, C.malloc(C.size_t(size)*4), b.usage)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, len(data)*typeSize, unsafe.Pointer(&data[0]), b.usage)
 	b.UnBind()
 }
-
-func (b gpuBuffer) LoadData(data []byte) {
-	b.Bind()
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, len(data), unsafe.Pointer(&data[0]), b.usage)
-	b.UnBind()
-}
-func (b gpuBuffer) LoadDataInt32(data []int32) {
-	b.Bind()
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, len(data)*4, unsafe.Pointer(&data[0]), b.usage)
-	b.UnBind()
-}
-func (b gpuBuffer) BindBase(number int) {
+func (b gpuBuffer) SetBinding(number int) {
 	b.BindBaseV(number, gl.SHADER_STORAGE_BUFFER)
 }
 func (b gpuBuffer) BindBaseV(number int, tType int) {
@@ -65,18 +58,51 @@ func toSlice[V any](pointer unsafe.Pointer, size int) []V {
 	sh.Cap = size
 	return output
 }
-func read[V constraints.Float | constraints.Integer](b gpuBuffer, size int) []V {
+func BufferRead[V any](b gpuBuffer, size int) []V {
+	typeSize := tSize[V]()
 	b.Bind()
-	var outType V
-	buffer := gl.MapBufferRange(gl.SHADER_STORAGE_BUFFER, 0, size*int(unsafe.Sizeof(outType)), gl.MAP_READ_BIT)
+	buffer := gl.MapBufferRange(gl.SHADER_STORAGE_BUFFER, 0, size*typeSize, gl.MAP_READ_BIT)
 	slice := toSlice[V](buffer, size)
 	gl.UnmapBuffer(gl.SHADER_STORAGE_BUFFER)
 	b.UnBind()
 	return slice
 }
+
+func (b gpuBuffer) Allocate(size int) {
+	BufferAllocate[byte](b, size)
+}
+func (b gpuBuffer) AllocateInt32(size int) {
+	BufferAllocate[int32](b, size)
+}
+func (b gpuBuffer) AllocateFloat32(size int) {
+	BufferAllocate[float32](b, size)
+}
+func (b gpuBuffer) AllocateFloat64(size int) {
+	BufferAllocate[float64](b, size)
+}
+
 func (b gpuBuffer) Read(size int) []byte {
-	return read[byte](b, size)
+	return BufferRead[byte](b, size)
 }
 func (b gpuBuffer) ReadInt32(size int) []int32 {
-	return read[int32](b, size)
+	return BufferRead[int32](b, size)
+}
+func (b gpuBuffer) ReadFloat32(size int) []float32 {
+	return BufferRead[float32](b, size)
+}
+func (b gpuBuffer) ReadFloat64(size int) []float64 {
+	return BufferRead[float64](b, size)
+}
+
+func (b gpuBuffer) LoadData(data []byte) {
+	BufferLoad(b, data)
+}
+func (b gpuBuffer) LoadDataInt32(data []int32) {
+	BufferLoad(b, data)
+}
+func (b gpuBuffer) LoadDataFloat32(data []float32) {
+	BufferLoad(b, data)
+}
+func (b gpuBuffer) LoadDataFloat64(data []float64) {
+	BufferLoad(b, data)
 }

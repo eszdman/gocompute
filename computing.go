@@ -12,7 +12,7 @@ type computeGroup struct {
 	X, Y, Z int
 }
 
-type computing struct {
+type Computing struct {
 	version        string
 	programCounter int
 	programs       map[int]uint32
@@ -28,8 +28,8 @@ func checkErr(operation string) {
 		log.Println(msg)
 	}
 }
-func NewComputing(createContext bool) (*computing, error) {
-	compute := &computing{}
+func NewComputing(createContext bool) (*Computing, error) {
+	compute := &Computing{}
 	compute.version = "#version 430"
 	compute.programs = make(map[int]uint32)
 	compute.defines = make([]string, 0)
@@ -81,7 +81,7 @@ func compileShader(shaderType int, shaderProgram string) (uint32, error) {
 	}
 	return shaderHandle, nil
 }
-func (c *computing) LoadProgram(programText string) (int, error) {
+func (c *Computing) LoadProgram(programText string) (int, error) {
 	c.programCounter++
 	count := c.programCounter - 1
 	shaderHandle, err := compileShader(gl.COMPUTE_SHADER, programText)
@@ -94,33 +94,33 @@ func (c *computing) LoadProgram(programText string) (int, error) {
 	c.programs[count] = program
 	return count, nil
 }
-func (c *computing) Define(Name string, value string) {
+func (c *Computing) Define(Name string, value string) {
 	c.defines = append(c.defines, value)
 	c.defineNames = append(c.defineNames, Name)
 }
 
-func (c *computing) DefineInt(Name string, value int) {
+func (c *Computing) DefineInt(Name string, value int) {
 	c.Define(Name, strconv.Itoa(value))
 }
 
-func (c *computing) DefineFloat(Name string, value float64) {
+func (c *Computing) DefineFloat(Name string, value float64) {
 	c.Define(Name, strconv.FormatFloat(value, 'e', 8, 32))
 }
 
-func (c *computing) DefineDouble(Name string, value float64) {
+func (c *Computing) DefineDouble(Name string, value float64) {
 	c.Define(Name, strconv.FormatFloat(value, 'e', 8, 64))
 }
 
-func (c *computing) UseProgram(programNumber int) {
+func (c *Computing) UseProgram(programNumber int) {
 	if len(c.defines) > 0 {
 		log.Println("Warning: using defines with preloaded program")
 	}
 	gl.UseProgram(c.programs[programNumber])
 }
-func (c *computing) Realize(x, y, z int) {
+func (c *Computing) Realize(x, y, z int) {
 	gl.DispatchCompute(uint32(x), uint32(y), uint32(z))
 }
-func (c *computing) UseLoadProgram(programText string) {
+func (c *Computing) UseLoadProgram(programText string) {
 	c.defines = make([]string, 0)
 	c.defineNames = make([]string, 0)
 	shaderHandle, _ := compileShader(gl.COMPUTE_SHADER, programText)
@@ -128,6 +128,6 @@ func (c *computing) UseLoadProgram(programText string) {
 	gl.AttachShader(program, shaderHandle)
 	gl.LinkProgram(program)
 }
-func (c *computing) Close() {
+func (c *Computing) Close() {
 
 }
