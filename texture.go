@@ -97,7 +97,7 @@ func (t *GpuTexture) Create3D(X, Y, Z int) {
 	t.SizeZ = Z
 }
 
-func TextureLoad1D[V constraints.Float | constraints.Integer](t *GpuTexture, data []V) {
+func TextureLoad1D[V any](t *GpuTexture, data []V) {
 	if t.check() {
 		return
 	}
@@ -106,7 +106,7 @@ func TextureLoad1D[V constraints.Float | constraints.Integer](t *GpuTexture, dat
 	checkErr("TextureSubImage1D")
 	t.UnBind()
 }
-func TextureLoad2D[V constraints.Float | constraints.Integer](t *GpuTexture, data []V) {
+func TextureLoad2D[V any](t *GpuTexture, data []V) {
 	if t.check() {
 		return
 	}
@@ -115,7 +115,7 @@ func TextureLoad2D[V constraints.Float | constraints.Integer](t *GpuTexture, dat
 	gl.TexSubImage2D(t.sampler, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
 	//t.UnBind()
 }
-func TextureLoad3D[V constraints.Float | constraints.Integer](t *GpuTexture, data []V) {
+func TextureLoad3D[V any](t *GpuTexture, data []V) {
 	if t.check() {
 		return
 	}
@@ -127,7 +127,8 @@ func TextureLoad3D[V constraints.Float | constraints.Integer](t *GpuTexture, dat
 
 func TextureRead[V constraints.Float | constraints.Integer](t *GpuTexture) []V {
 	t.Bind()
-	output := make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels)
+	size := tSize[V]()
+	output := make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize/size)
 	gl.GetTextureSubImage(t.id, t.level, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), int32(t.SizeZ),
 		t.Format(), t.XType(), int32(t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize), unsafe.Pointer(&output[0]))
 	checkErr("GetTextureSubImage")

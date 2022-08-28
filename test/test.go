@@ -8,16 +8,19 @@ import (
 )
 
 //go:embed resources/bufferTest.glsl
-var testProg string
+var bufferTest string
 
 //go:embed resources/bufferTest2.glsl
-var testProg2 string
+var bufferTest2 string
 
 //go:embed resources/bufferTest3.glsl
-var testProg3 string
+var bufferTest3 string
 
 //go:embed resources/textureTest.glsl
-var testProg4 string
+var textureTest string
+
+//go:embed resources/textureTest2.glsl
+var textureTest2 string
 
 //go:embed resources/include/*
 var includes embed.FS
@@ -77,6 +80,7 @@ func BufferExample3(compute *gocompute.Computing, program int) {
 	buffer := compute.NewBuffer()
 	buffer2 := compute.NewBuffer()
 	//Generic gocompute method
+	//It's possible to pass structures into buffer memory
 	gocompute.BufferAllocate[pointsVecXYZW](buffer2, 9)
 	points := make([]pointsVecXYZW, 9)
 	//Write into first point for example
@@ -102,7 +106,23 @@ func TextureExample(compute *gocompute.Computing, program int) {
 	compute.UseProgram(program)
 	texture.SetBinding(0)
 	compute.Realize(2, 1, 1)
-	log.Println(gocompute.TextureRead[float32](texture))
+	log.Println(texture.ReadFloat32())
+	texture.Close()
+}
+func TextureExample2(compute *gocompute.Computing, program int) {
+	log.Println("TextureExample2 started")
+	texture := compute.NewTexture(gocompute.FLOAT32, 4)
+	points := make([]pointsVecXYZW, 2)
+	//Write into first point for example
+	points[0].vecX = 0.25
+	points[0].vecY = 0.5
+	texture.Create1D(2)
+	//It's possible to pass structures into texture memory
+	gocompute.TextureLoad1D[pointsVecXYZW](texture, points)
+	compute.UseProgram(program)
+	texture.SetBinding(0)
+	compute.Realize(2, 1, 1)
+	log.Println(texture.ReadFloat32())
 	texture.Close()
 }
 
@@ -116,14 +136,16 @@ func main() {
 		return string(data)
 	})
 	//Precompiled programs
-	bufferProgram := logLoad(compute, testProg)
-	bufferProgram2 := logLoad(compute, testProg2)
-	bufferProgram3 := logLoad(compute, testProg3)
-	textureProgram := logLoad(compute, testProg4)
+	bufferProgram := logLoad(compute, bufferTest)
+	bufferProgram2 := logLoad(compute, bufferTest2)
+	bufferProgram3 := logLoad(compute, bufferTest3)
+	textureProgram := logLoad(compute, textureTest)
+	textureProgram2 := logLoad(compute, textureTest2)
 	//Buffer usage examples
 	BufferExample(compute, bufferProgram)
 	BufferExample2(compute, bufferProgram2)
 	BufferExample3(compute, bufferProgram3)
 	//Texture usage examples
 	TextureExample(compute, textureProgram)
+	TextureExample2(compute, textureProgram2)
 }
