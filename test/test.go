@@ -123,6 +123,7 @@ func TextureExample2(compute *gocompute.Computing, program int) {
 	texture.SetBinding(0)
 	compute.Realize(2, 1, 1)
 	log.Println(texture.ReadFloat32())
+	log.Println(gocompute.TextureRead[pointsVecXYZW](texture))
 	texture.Close()
 }
 

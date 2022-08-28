@@ -2,7 +2,6 @@ package gocompute
 
 import (
 	"github.com/go-gl/gl/v4.3-core/gl"
-	"golang.org/x/exp/constraints"
 	"unsafe"
 )
 
@@ -125,7 +124,7 @@ func TextureLoad3D[V any](t *GpuTexture, data []V) {
 	//t.UnBind()
 }
 
-func TextureRead[V constraints.Float | constraints.Integer](t *GpuTexture) []V {
+func TextureRead[V any](t *GpuTexture) []V {
 	t.Bind()
 	size := tSize[V]()
 	output := make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize/size)
