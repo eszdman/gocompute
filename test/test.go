@@ -7,14 +7,17 @@ import (
 	"log"
 )
 
-//go:embed resources/test.glsl
+//go:embed resources/bufferTest.glsl
 var testProg string
 
-//go:embed resources/test2.glsl
+//go:embed resources/bufferTest2.glsl
 var testProg2 string
 
-//go:embed resources/test3.glsl
+//go:embed resources/bufferTest3.glsl
 var testProg3 string
+
+//go:embed resources/textureTest.glsl
+var testProg4 string
 
 //go:embed resources/include/*
 var includes embed.FS
@@ -36,22 +39,22 @@ func logLoad(compute *gocompute.Computing, program string) int {
 	}
 	return programID
 }
-func Example1(compute *gocompute.Computing, program int) {
-	log.Println("Example1 started")
-	compute.UseProgram(program)
+func BufferExample(compute *gocompute.Computing, program int) {
+	log.Println("BufferExample started")
 	buffer := compute.NewBuffer()
 	buffer2 := compute.NewBuffer()
 	buffer2.AllocateFloat32(9)
 	buffer.LoadDataFloat32([]float32{1, 2, 3, 4, 5, 6, 7, 8, 9})
+	compute.UseProgram(program)
 	buffer.SetBinding(1)
 	buffer2.SetBinding(2)
 	compute.Realize(buffer2.Size, 1, 1)
-	log.Println(buffer.ReadFloat32(buffer.Size))
 	log.Println(buffer2.ReadFloat32(buffer2.Size))
+	buffer.Close()
+	buffer2.Close()
 }
-func Example2(compute *gocompute.Computing, program int) {
-	log.Println("Example2 started")
-	compute.UseProgram(program)
+func BufferExample2(compute *gocompute.Computing, program int) {
+	log.Println("BufferExample2 started")
 	buffer := compute.NewBuffer()
 	buffer2 := compute.NewBuffer()
 	gocompute.BufferAllocate[pointsVecXY](buffer2, 9)
@@ -60,18 +63,20 @@ func Example2(compute *gocompute.Computing, program int) {
 	points[0].vecX = 0.25
 	points[0].vecY = 0.5
 	gocompute.BufferLoad(buffer, points)
+	compute.UseProgram(program)
 	buffer.SetBinding(1)
 	buffer2.SetBinding(2)
 	compute.Realize(9, 1, 1)
 	log.Println(gocompute.BufferRead[pointsVecXY](buffer, 9))
 	log.Println(gocompute.BufferRead[pointsVecXY](buffer2, 9))
+	buffer.Close()
+	buffer2.Close()
 }
-func Example3(compute *gocompute.Computing, program int) {
-	log.Println("Example3 started")
-	compute.UseProgram(program)
-
+func BufferExample3(compute *gocompute.Computing, program int) {
+	log.Println("BufferExample3 started")
 	buffer := compute.NewBuffer()
 	buffer2 := compute.NewBuffer()
+	//Generic gocompute method
 	gocompute.BufferAllocate[pointsVecXYZW](buffer2, 9)
 	points := make([]pointsVecXYZW, 9)
 	//Write into first point for example
@@ -80,12 +85,27 @@ func Example3(compute *gocompute.Computing, program int) {
 	points[0].vecZ = 0.75
 	points[0].vecW = 1.0
 	gocompute.BufferLoad(buffer, points)
+	compute.UseProgram(program)
 	buffer.SetBinding(1)
 	buffer2.SetBinding(2)
 	compute.Realize(buffer2.Size, 1, 1)
 	log.Println(gocompute.BufferRead[pointsVecXYZW](buffer, buffer.Size))
 	log.Println(gocompute.BufferRead[pointsVecXYZW](buffer2, buffer2.Size))
+	buffer.Close()
+	buffer2.Close()
 }
+func TextureExample(compute *gocompute.Computing, program int) {
+	log.Println("TextureExample started")
+	texture := compute.NewTexture(gocompute.FLOAT32, 4)
+	texture.Create1D(2)
+	gocompute.TextureLoad1D[float32](texture, []float32{1, 1, 1, 1, 0, 0, 0, 0})
+	compute.UseProgram(program)
+	texture.SetBinding(0)
+	compute.Realize(2, 1, 1)
+	log.Println(gocompute.TextureRead[float32](texture))
+	texture.Close()
+}
+
 func main() {
 	compute, _ := gocompute.NewComputing(true)
 	compute.SetIncludeLoader(func(includeName string) string {
@@ -96,14 +116,14 @@ func main() {
 		return string(data)
 	})
 	//Precompiled programs
-	program0 := logLoad(compute, testProg)
-	program1 := logLoad(compute, testProg2)
-	program2 := logLoad(compute, testProg3)
+	bufferProgram := logLoad(compute, testProg)
+	bufferProgram2 := logLoad(compute, testProg2)
+	bufferProgram3 := logLoad(compute, testProg3)
+	textureProgram := logLoad(compute, testProg4)
 	//Buffer usage examples
-	Example1(compute, program0)
-	Example2(compute, program1)
-	Example3(compute, program2)
-
+	BufferExample(compute, bufferProgram)
+	BufferExample2(compute, bufferProgram2)
+	BufferExample3(compute, bufferProgram3)
 	//Texture usage examples
-
+	TextureExample(compute, textureProgram)
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 type computeGroup struct {
@@ -15,6 +16,7 @@ type computeGroup struct {
 }
 
 type Computing struct {
+	currentProgram  int
 	includeLoader   func(name string) string
 	version         string
 	programCounter  int
@@ -65,6 +67,39 @@ func NewComputing(createContext bool) (*Computing, error) {
 		}
 	}
 	return compute, nil
+}
+func (c *Computing) SetInt(name string, input ...int) {
+	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name+"\x00"))
+	switch len(input) {
+	case 1:
+		gl.Uniform1i(address, int32(input[0]))
+	case 2:
+		gl.Uniform2i(address, int32(input[0]), int32(input[1]))
+	case 3:
+		gl.Uniform3i(address, int32(input[0]), int32(input[1]), int32(input[2]))
+	case 4:
+		gl.Uniform4i(address, int32(input[0]), int32(input[1]), int32(input[2]), int32(input[2]))
+	}
+	checkErr("SetInt:" + name)
+}
+
+func (c *Computing) SetFloat32(name string, input ...float32) {
+	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name))
+	switch len(input) {
+	case 1:
+		gl.Uniform1f(address, input[0])
+	case 2:
+		gl.Uniform2f(address, input[0], input[1])
+	case 3:
+		gl.Uniform3f(address, input[0], input[1], input[2])
+	case 4:
+		gl.Uniform4f(address, input[0], input[1], input[2], input[2])
+	}
+}
+
+// SetOffset Offset only applied to gl_GlobalInvocationID
+func (c *Computing) SetOffset(x, y, z int) {
+	c.SetInt("computeoffset", x, y, z)
 }
 
 func compileShader(shaderType int, shaderProgram string) (uint32, error) {
@@ -163,7 +198,9 @@ func (c *Computing) preProcess(computeProgram string) string {
 				text = "#define " + split[1] + res
 			}
 		case strings.Contains(text, "main()"):
-			text = "" + text
+			text = "uniform ivec3 computeoffset;\n#line " + strconv.Itoa(lineCnt-1) + "\n" + text
+		case strings.Contains(text, "gl_GlobalInvocationID"):
+			text = strings.ReplaceAll(text, "gl_GlobalInvocationID", "(ivec3(gl_GlobalInvocationID) + ivec3(computeoffset))")
 		case strings.Contains(text, "layout"):
 			input := strings.ReplaceAll(text, " ", "")
 			replacer := strings.NewReplacer("layout(", "", ")in", "", ";", "")
@@ -193,6 +230,11 @@ func (c *Computing) preProcess(computeProgram string) string {
 	}
 	println("lines:" + lines)
 	return lines
+}
+
+func tSize[V any]() int {
+	var inType V
+	return int(unsafe.Sizeof(inType))
 }
 
 func (c *Computing) Close() {

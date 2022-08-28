@@ -1,5 +1,4 @@
 #include sigmoid
-#define TEST 0
 precision lowp float;
 uniform float roll;
 writeonly uniform image2D img_output;
@@ -18,6 +17,6 @@ void main() {
 	outputValues[idx].xyzw.x = idx;
 	outputValues[idx].xyzw.y = idx;
 	outputValues[idx].xyzw.z = idx;
-	outputValues[idx].xyzw.w = idx + TEST;
+	outputValues[idx].xyzw.w = idx;
 	outputValues[idx].xyzw += inputValues[idx].xyzw;
 }

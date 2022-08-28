@@ -1,5 +1,8 @@
 package gocompute
 
+/*
+#include <stdlib.h>
+*/
 import "C"
 import (
 	"github.com/go-gl/gl/v4.3-core/gl"
@@ -25,23 +28,33 @@ func (c *Computing) NewBufferV(usage uint32) *GpuBuffer {
 func (b *GpuBuffer) Bind() {
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, b.id)
 }
-func tSize[V any]() int {
-	var inType V
-	return int(unsafe.Sizeof(inType))
+func (b *GpuBuffer) check() bool {
+	if b.id == 0xFFFFFFFF {
+		println("Buffer object with ID:", b.id, "already closed!")
+		return b.id == 0xFFFFFFFF
+	}
+	return false
 }
+
 func BufferAllocate[V any](b *GpuBuffer, size int) {
+	if b.check() {
+		return
+	}
 	typeSize := tSize[V]()
 	b.Bind()
 	b.Size = size
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size*typeSize, C.malloc(C.size_t(size*typeSize)), b.usage)
-	b.UnBind()
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size*typeSize, nil, b.usage)
+	//b.UnBind()
 }
 func BufferLoad[V any](b *GpuBuffer, data []V) {
+	if b.check() {
+		return
+	}
 	typeSize := tSize[V]()
 	b.Bind()
 	b.Size = len(data)
 	gl.BufferData(gl.SHADER_STORAGE_BUFFER, len(data)*typeSize, unsafe.Pointer(&data[0]), b.usage)
-	b.UnBind()
+	//b.UnBind()
 }
 func (b *GpuBuffer) SetBinding(number int) {
 	b.BindBaseV(number, gl.SHADER_STORAGE_BUFFER)
@@ -62,12 +75,15 @@ func toSlice[V any](pointer unsafe.Pointer, size int) []V {
 	return output
 }
 func BufferRead[V any](b *GpuBuffer, size int) []V {
+	if b.check() {
+		return nil
+	}
 	typeSize := tSize[V]()
 	b.Bind()
 	buffer := gl.MapBufferRange(gl.SHADER_STORAGE_BUFFER, 0, size*typeSize, gl.MAP_READ_BIT)
 	slice := toSlice[V](buffer, size)
 	gl.UnmapBuffer(gl.SHADER_STORAGE_BUFFER)
-	b.UnBind()
+	//b.UnBind()
 	return slice
 }
 
@@ -108,4 +124,9 @@ func (b *GpuBuffer) LoadDataFloat32(data []float32) {
 }
 func (b *GpuBuffer) LoadDataFloat64(data []float64) {
 	BufferLoad(b, data)
+}
+
+func (b *GpuBuffer) Close() {
+	gl.DeleteBuffers(1, &b.id)
+	b.id = 0xFFFFFFFF
 }
