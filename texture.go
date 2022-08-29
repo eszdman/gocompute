@@ -356,6 +356,26 @@ func (t *GpuTexture) check() bool {
 	return false
 }
 
+func (t *GpuTexture) Load1D(data []byte) {
+	TextureLoad1D(t, data)
+}
+func (t *GpuTexture) Load2D(data []byte) {
+	TextureLoad2D(t, data)
+}
+func (t *GpuTexture) Load3D(data []byte) {
+	TextureLoad3D(t, data)
+}
+
+func (t *GpuTexture) Load1DFloat32(data []float32) {
+	TextureLoad1D(t, data)
+}
+func (t *GpuTexture) Load2DFloat32(data []float32) {
+	TextureLoad2D(t, data)
+}
+func (t *GpuTexture) Load3DFloat32(data []float32) {
+	TextureLoad3D(t, data)
+}
+
 func (t *GpuTexture) Close() {
 	if t.check() {
 		return

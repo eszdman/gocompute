@@ -1,6 +1,3 @@
-precision lowp float;
-uniform float roll;
-writeonly uniform image2D img_output;
 layout(std430, binding = 1) buffer inputBuffer {
 	float inputValues[];
 };

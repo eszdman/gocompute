@@ -53,7 +53,6 @@ func NewComputing(createContext bool) (*Computing, error) {
 		glfw.WindowHint(glfw.ContextVersionMinor, 3)
 		glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 		glfw.WindowHint(glfw.OpenGLForwardCompatible, 1)
-		glfw.WindowHint(glfw.Maximized, glfw.True)
 		glfw.WindowHint(glfw.Visible, glfw.False)
 		window, err := glfw.CreateWindow(1, 1, "Computing", nil, nil)
 		if err != nil {
@@ -70,6 +69,9 @@ func NewComputing(createContext bool) (*Computing, error) {
 }
 func (c *Computing) SetInt(name string, input ...int) {
 	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name+"\x00"))
+	if address == -1 {
+		println("SetInt uniform:", name, "not found")
+	}
 	switch len(input) {
 	case 1:
 		gl.Uniform1i(address, int32(input[0]))
@@ -84,7 +86,10 @@ func (c *Computing) SetInt(name string, input ...int) {
 }
 
 func (c *Computing) SetFloat32(name string, input ...float32) {
-	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name))
+	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name+"\x00"))
+	if address == -1 {
+		println("SetFloat32 uniform:", name, "not found")
+	}
 	switch len(input) {
 	case 1:
 		gl.Uniform1f(address, input[0])
@@ -159,7 +164,8 @@ func (c *Computing) UseProgram(programNumber int) {
 	if len(c.defineMap) > 0 {
 		log.Println("Warning: using defines with preloaded program")
 	}
-	gl.UseProgram(c.programs[programNumber])
+	c.currentProgram = programNumber
+	gl.UseProgram(c.programs[c.currentProgram])
 }
 func (c *Computing) SetIncludeLoader(loader func(name string) string) {
 	if loader != nil {
@@ -228,7 +234,7 @@ func (c *Computing) preProcess(computeProgram string) string {
 	if !versioned {
 		lines = c.version + "\n#line 1\n" + lines
 	}
-	println("lines:" + lines)
+	//println("lines:" + lines)
 	return lines
 }
 

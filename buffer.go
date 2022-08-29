@@ -113,16 +113,16 @@ func (b *GpuBuffer) ReadFloat64(size int) []float64 {
 	return BufferRead[float64](b, size)
 }
 
-func (b *GpuBuffer) LoadData(data []byte) {
+func (b *GpuBuffer) Load(data []byte) {
 	BufferLoad(b, data)
 }
-func (b *GpuBuffer) LoadDataInt32(data []int32) {
+func (b *GpuBuffer) LoadInt32(data []int32) {
 	BufferLoad(b, data)
 }
-func (b *GpuBuffer) LoadDataFloat32(data []float32) {
+func (b *GpuBuffer) LoadFloat32(data []float32) {
 	BufferLoad(b, data)
 }
-func (b *GpuBuffer) LoadDataFloat64(data []float64) {
+func (b *GpuBuffer) LoadFloat64(data []float64) {
 	BufferLoad(b, data)
 }
 

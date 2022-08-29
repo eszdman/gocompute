@@ -1,6 +1,3 @@
-precision lowp float;
-uniform float roll;
-writeonly uniform image2D img_output;
 struct points {
 	/*float x;
 	float y;*/
