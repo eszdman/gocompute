@@ -184,12 +184,13 @@ func SpeedTest(compute *gc.Computing, program int) {
 	msStart := time.Now().UnixNano() / int64(time.Nanosecond)
 	compute.Realize(buffer2.Size, 1, 1)
 	msEnd := time.Now().UnixNano() / int64(time.Nanosecond)
-	us := msEnd - msStart
+	ns := msEnd - msStart
 	log.Println("D", "GPU Speed test")
-	log.Println("D", "Time elapsed:", us, "ns")
-	count := float32(elementsCount) / 1000000000
+	log.Println("D", "Time elapsed:", ns, "ns")
+	count := float32(elementsCount) / 1000000
 	log.Println("D", "Operations count:", count, "M")
-	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)*1000000000.0/float64(us))), "M")
+	seconds := float64(ns) / float64(time.Second)
+	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
 
 	in1 := b
 	in2 := make([]float32, elementsCount)
@@ -200,11 +201,13 @@ func SpeedTest(compute *gc.Computing, program int) {
 	}
 	msEnd = time.Now().UnixNano() / int64(time.Nanosecond)
 	log.Println("D", "CPU Speed test")
-	us = msEnd - msStart
-	log.Println("D", "Time elapsed:", us, "ns")
-	count = float32(elementsCount) / 1000000000
+	ns = msEnd - msStart
+	log.Println("D", "Time elapsed:", ns, "ns")
+	log.Println("D", "Time elapsed:", ns/1000, "ns")
+	count = float32(elementsCount) / 1000000
+	seconds = float64(ns) / float64(time.Second)
 	log.Println("D", "Operations count:", count, "M")
-	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)*1000000000.0/float64(us))), "M")
+	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
 	buffer.Close()
 	buffer2.Close()
 }
