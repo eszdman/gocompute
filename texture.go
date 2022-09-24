@@ -96,32 +96,46 @@ func (t *GpuTexture) Create3D(X, Y, Z int) {
 	t.SizeZ = Z
 }
 
-func TextureLoad1D[V any](t *GpuTexture, data []V) {
+func TextureLoad1DRange[V any](t *GpuTexture, data []V, offset int) {
 	if t.check() {
 		return
 	}
 	t.Bind()
-	gl.TexSubImage1D(t.sampler, 0, 0, int32(t.SizeX), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
+	gl.TexSubImage1D(t.sampler, 0, int32(offset), int32(t.SizeX), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
 	checkErr("TextureSubImage1D")
 	t.UnBind()
 }
-func TextureLoad2D[V any](t *GpuTexture, data []V) {
+
+func TextureLoad2DRange[V any](t *GpuTexture, data []V, offsetX, offsetY int) {
 	if t.check() {
 		return
 	}
 	t.Bind()
 	t.SizeX = len(data)
-	gl.TexSubImage2D(t.sampler, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
+	gl.TexSubImage2D(t.sampler, 0, int32(offsetX), int32(offsetY), int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
 	//t.UnBind()
 }
-func TextureLoad3D[V any](t *GpuTexture, data []V) {
+
+func TextureLoad3DRange[V any](t *GpuTexture, data []V, offsetX, offsetY, offsetZ int) {
 	if t.check() {
 		return
 	}
 	t.Bind()
 	t.SizeX = len(data)
-	gl.TexSubImage3D(t.sampler, 0, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), int32(t.SizeZ), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
+	gl.TexSubImage3D(t.sampler, 0, int32(offsetX), int32(offsetY), int32(offsetZ), int32(t.SizeX), int32(t.SizeY), int32(t.SizeZ), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
 	//t.UnBind()
+}
+
+func TextureLoad3D[V any](t *GpuTexture, data []V) {
+	TextureLoad3DRange(t, data, 0, 0, 0)
+}
+
+func TextureLoad2D[V any](t *GpuTexture, data []V) {
+	TextureLoad2DRange(t, data, 0, 0)
+}
+
+func TextureLoad1D[V any](t *GpuTexture, data []V) {
+	TextureLoad1DRange(t, data, 0)
 }
 
 func TextureRead[V any](t *GpuTexture) []V {
