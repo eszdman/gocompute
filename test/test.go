@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"embed"
 	_ "embed"
@@ -201,3 +202,4 @@ func main() {
 	//for {
 	//}
 }
+*/

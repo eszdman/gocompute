@@ -1,5 +1,6 @@
 package gocompute
 
+/*
 import (
 	"github.com/go-gl/gl/v4.3-core/gl"
 	"unsafe"
@@ -383,3 +384,6 @@ func (t *GpuTexture) Close() {
 	gl.DeleteTextures(1, &t.id)
 	t.id = 0xFFFFFFFF
 }
+
+
+*/

@@ -1,5 +1,6 @@
 package gocompute
 
+/*
 import (
 	"bufio"
 	"errors"
@@ -246,3 +247,5 @@ func tSize[V any]() int {
 func (c *Computing) Close() {
 
 }
+
+*/

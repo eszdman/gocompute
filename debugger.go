@@ -1,5 +1,6 @@
 package gocompute
 
+/*
 import (
 	"errors"
 	"github.com/go-gl/gl/all-core/gl"
@@ -77,3 +78,6 @@ func (d *debugger) debugWindow() {
 	}()
 
 }
+
+
+*/
