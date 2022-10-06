@@ -166,6 +166,7 @@ func (c *Computing) UseProgram(programNumber int) {
 	}
 	c.currentProgram = programNumber
 	gl.UseProgram(c.programs[c.currentProgram])
+	checkErr("UseProgram")
 }
 func (c *Computing) SetIncludeLoader(loader func(name string) string) {
 	if loader != nil {

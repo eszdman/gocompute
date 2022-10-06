@@ -83,6 +83,7 @@ func (t *GpuTexture) Create2D(X, Y int) {
 	t.sampler = gl.TEXTURE_2D
 	t.Bind()
 	gl.TexStorage2D(t.sampler, t.levels, t.InternalFormat(), int32(X), int32(Y))
+	checkErr("TexStorage2D")
 	t.SizeX = X
 	t.SizeY = Y
 	t.SizeZ = 1
@@ -111,8 +112,8 @@ func TextureLoad2DRange[V any](t *GpuTexture, data []V, offsetX, offsetY int) {
 		return
 	}
 	t.Bind()
-	t.SizeX = len(data)
 	gl.TexSubImage2D(t.sampler, 0, int32(offsetX), int32(offsetY), int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
+	checkErr("TexSubImage2D")
 	//t.UnBind()
 }
 
@@ -153,6 +154,7 @@ func (t *GpuTexture) SetBinding(number int) {
 		return
 	}
 	gl.BindImageTexture(uint32(number), t.id, t.level, false, 0, gl.READ_WRITE, t.InternalFormat())
+	checkErr("BindImageTexture")
 }
 
 func (t *GpuTexture) Read() []byte {

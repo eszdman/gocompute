@@ -27,6 +27,9 @@ var textureTest2 string
 //go:embed resources/functionsTest.glsl
 var functionsTest string
 
+//go:embed resources/speedTest2.glsl
+var speedTest2 string
+
 //go:embed resources/include/*
 var includes embed.FS
 
@@ -60,8 +63,8 @@ func BufferExample(compute *gc.Computing, program int) {
 func BufferExample2(compute *gc.Computing, program int) {
 	log.Println("D", "BufferExample2 started")
 	//Possible to set buffer memory usage hint
-	buffer := compute.NewBufferV(gc.STATIC_WRITE)
-	buffer2 := compute.NewBufferV(gc.STATIC_READ)
+	buffer := compute.NewBufferV(gc.STATIC_READ)
+	buffer2 := compute.NewBufferV(gc.STATIC_WRITE)
 
 	//Possible to use any structure
 	gc.BufferAllocate[gc.Vec2](buffer2, 9)
@@ -82,8 +85,8 @@ func BufferExample2(compute *gc.Computing, program int) {
 }
 func BufferExample3(compute *gc.Computing, program int) {
 	log.Println("D", "BufferExample3 started")
-	buffer := compute.NewBufferV(gc.STATIC_WRITE)
-	buffer2 := compute.NewBufferV(gc.STATIC_COPY)
+	buffer := compute.NewBufferV(gc.STATIC_READ)
+	buffer2 := compute.NewBufferV(gc.STATIC_WRITE)
 	//Generic gc method
 
 	//It's possible to pass any element structures into buffer memory
@@ -164,10 +167,10 @@ func FunctionsExample(compute *gc.Computing, program int) {
 }
 func SpeedTest(compute *gc.Computing, program int) {
 	log.Println("D", "SpeedTest started")
-	buffer := compute.NewBufferV(gc.STATIC_WRITE)
-	buffer2 := compute.NewBufferV(gc.STREAM_WRITE)
-	//Allocate buffer data
-	elementsCount := 80000000
+	buffer := compute.NewBufferV(gc.STATIC_READ)
+	buffer2 := compute.NewBufferV(gc.STATIC_WRITE)
+	//Allocate buffer data, maximal buffer 65535
+	elementsCount := 65535
 	buffer2.AllocateFloat32(elementsCount)
 	//Load data into buffer instead of allocation
 	b := make([]float32, elementsCount)
@@ -183,8 +186,10 @@ func SpeedTest(compute *gc.Computing, program int) {
 	//Run program with size
 	msStart := time.Now().UnixNano() / int64(time.Nanosecond)
 	compute.Realize(buffer2.Size, 1, 1)
+
 	msEnd := time.Now().UnixNano() / int64(time.Nanosecond)
 	ns := msEnd - msStart
+	log.Println(gc.BufferRead[float32](buffer2, buffer2.Size)[elementsCount-1])
 	log.Println("D", "GPU Speed test")
 	log.Println("D", "Time elapsed:", ns, "ns")
 	count := float32(elementsCount) / 1000000
@@ -199,12 +204,73 @@ func SpeedTest(compute *gc.Computing, program int) {
 	for ind := 0; ind < elementsCount; ind++ {
 		in2[ind] = float32(ind) + in1[ind]
 	}
+
 	msEnd = time.Now().UnixNano() / int64(time.Nanosecond)
+
 	log.Println("D", "CPU Speed test")
 	ns = msEnd - msStart
 	log.Println("D", "Time elapsed:", ns, "ns")
 	log.Println("D", "Time elapsed:", ns/1000, "ns")
 	count = float32(elementsCount) / 1000000
+	seconds = float64(ns) / float64(time.Second)
+	log.Println("D", "Operations count:", count, "M")
+	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
+	buffer.Close()
+	buffer2.Close()
+}
+
+func SpeedTest2(compute *gc.Computing, program int) {
+	log.Println("D", "SpeedTest started")
+	buffer := compute.NewTexture(gc.FLOAT32, 1)
+	buffer2 := compute.NewTexture(gc.FLOAT32, 1)
+	//elementsCount := 7000
+	//elementsCount2 := 116
+	elementsCount := 4000
+	elementsCount2 := 200
+	buffer2.Create2D(elementsCount, elementsCount2)
+	buffer.Create2D(elementsCount, elementsCount2)
+	//Load data into buffer instead of allocation
+	b := make([]float32, elementsCount*elementsCount2)
+	for i := 0; i < elementsCount*elementsCount2; i++ {
+		b[i] = float32(i)
+	}
+
+	buffer.Load2DFloat32(b)
+	buffer2.Load2DFloat32(make([]float32, elementsCount*elementsCount2))
+	//Change current program to selected
+	compute.UseProgram(program)
+	//Bind buffer to layout binding
+	buffer.SetBinding(0)
+	buffer2.SetBinding(1)
+	//Run program with size
+	msStart := time.Now().UnixNano() / int64(time.Nanosecond)
+	compute.Realize(buffer2.SizeX, buffer2.SizeY, 1)
+
+	msEnd := time.Now().UnixNano() / int64(time.Nanosecond)
+	ns := msEnd - msStart
+	log.Println(gc.TextureRead[float32](buffer2)[elementsCount*elementsCount2-1])
+	log.Println("D", "GPU Speed test")
+	log.Println("D", "Time elapsed:", ns, "ns")
+	count := float32(elementsCount*elementsCount2) / 1000000
+	log.Println("D", "Operations count:", count, "M")
+	seconds := float64(ns) / float64(time.Second)
+	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
+
+	in1 := b
+	in2 := make([]float32, elementsCount*elementsCount2)
+	//Compare with CPU
+	msStart = time.Now().UnixNano() / int64(time.Nanosecond)
+	for ind := 0; ind < elementsCount*elementsCount2; ind++ {
+		in2[ind] = float32(ind) + in1[ind]
+	}
+
+	msEnd = time.Now().UnixNano() / int64(time.Nanosecond)
+
+	log.Println("D", "CPU Speed test")
+	ns = msEnd - msStart
+	log.Println("D", "Time elapsed:", ns, "ns")
+	log.Println("D", "Time elapsed:", ns/1000, "ns")
+	count = float32(elementsCount*elementsCount2) / 1000000
 	seconds = float64(ns) / float64(time.Second)
 	log.Println("D", "Operations count:", count, "M")
 	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
@@ -232,6 +298,7 @@ func main() {
 	textureProgram := logLoad(compute, textureTest)
 	textureProgram2 := logLoad(compute, textureTest2)
 	functionsProgram := logLoad(compute, functionsTest)
+	speedProgram2 := logLoad(compute, speedTest2)
 	//Buffer usage examples
 	BufferExample(compute, bufferProgram)
 	BufferExample2(compute, bufferProgram2)
@@ -242,7 +309,8 @@ func main() {
 	//Include and functions examples
 	FunctionsExample(compute, functionsProgram)
 
-	SpeedTest(compute, bufferProgram)
+	//SpeedTest(compute, bufferProgram)
+	SpeedTest2(compute, speedProgram2)
 	//Debugger examples
 	//debugger1 := gc.CreateDebugger()
 	//debugger1.StartWindow()

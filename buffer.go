@@ -60,6 +60,7 @@ func BufferAllocate[V any](b *GpuBuffer, size int) {
 	typeSize := tSize[V]()
 	b.Bind()
 	b.Size = size
+	//gl.BufferStorage()
 	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size*typeSize, nil, uint32(b.usage))
 	//b.UnBind()
 }
