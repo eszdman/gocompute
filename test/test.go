@@ -48,7 +48,8 @@ func BufferExample(compute *gc.Computing, program int) {
 	//Allocate buffer data
 	buffer2.AllocateFloat32(9)
 	//Load data into buffer instead of allocation
-	buffer.LoadFloat32([]float32{1, 2, 3, 4, 5, 6, 7, 8, 9})
+	target := []float32{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	buffer.LoadFloat32(target)
 	//Change current program to selected
 	compute.UseProgram(program)
 	//Bind buffer to layout binding
@@ -56,7 +57,14 @@ func BufferExample(compute *gc.Computing, program int) {
 	buffer2.SetBinding(2)
 	//Run program with size
 	compute.Realize(buffer2.Size, 1, 1)
-	log.Println("D", buffer2.ReadFloat32(buffer2.Size))
+	read := buffer2.ReadFloat32(buffer2.Size)
+	log.Println("D", read)
+	for i := 0; i < len(read); i++ {
+		val := target[i] + float32(i)
+		if val != read[i] {
+			log.Println("E", "Wrong action", "ind:", i, "val input:", val, "val output", read[i])
+		}
+	}
 	buffer.Close()
 	buffer2.Close()
 }
@@ -113,13 +121,22 @@ func TextureExample(compute *gc.Computing, program int) {
 	log.Println("D", "TextureExample started")
 	texture := compute.NewTexture(gc.FLOAT32, 4)
 	texture.Create1D(2)
-	texture.Load1DFloat32([]float32{1, 1, 1, 1, 0, 0, 0, 0})
+	input := []float32{1, 1, 1, 1, 0, 0, 0, 0}
+	texture.Load1DFloat32(input)
 	compute.UseProgram(program)
 	texture.SetBinding(0)
 	//Add offset to gl_GlobalInvocationID
 	compute.SetOffset(1, 0, 0)
 	compute.Realize(2, 1, 1)
+	read := texture.ReadFloat32()
 	log.Println("D", texture.ReadFloat32())
+	for i := 0; i < len(read); i++ {
+		idx := 1.0 - float32(i/4)/10.0
+		val := input[i] + idx
+		if val != read[i] {
+			log.Println("E", "Wrong action", "ind:", i, "val input:", val, "val output", read[i])
+		}
+	}
 	//vec4 in texture(0,0) should be unchanged because of offset
 	texture.Close()
 }
@@ -226,7 +243,7 @@ func SpeedTest2(compute *gc.Computing, program int) {
 	//elementsCount := 7000
 	//elementsCount2 := 116
 	elementsCount := 4000
-	elementsCount2 := 200
+	elementsCount2 := 250 //TODO fix buffer/texture size, bug works with elementsCount2<200
 	buffer2.Create2D(elementsCount, elementsCount2)
 	buffer.Create2D(elementsCount, elementsCount2)
 	//Load data into buffer instead of allocation
@@ -236,6 +253,12 @@ func SpeedTest2(compute *gc.Computing, program int) {
 	}
 
 	buffer.Load2DFloat32(b)
+
+	//Test if bug is fixed
+	if gc.TextureRead[float32](buffer)[elementsCount*elementsCount2-1] != float32(elementsCount*elementsCount2-1) {
+		log.Println("E", "Wrong buffer value:", gc.TextureRead[float32](buffer2)[elementsCount*elementsCount2-1],
+			"instead of:", float32(elementsCount*elementsCount2-1))
+	}
 	buffer2.Load2DFloat32(make([]float32, elementsCount*elementsCount2))
 	//Change current program to selected
 	compute.UseProgram(program)
