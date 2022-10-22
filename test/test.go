@@ -242,12 +242,12 @@ func SpeedTest2(compute *gc.Computing, program int) {
 	buffer2 := compute.NewTexture(gc.FLOAT32, 1)
 	//elementsCount := 7000
 	//elementsCount2 := 116
-	elementsCount := 4000
-	elementsCount2 := 250 //TODO fix buffer/texture size, bug works with elementsCount2<200
+	elementsCount := 8000
+	elementsCount2 := 8000 //TODO fix buffer/texture size, bug works with elementsCount2<200
+	b := make([]float32, elementsCount*elementsCount2)
 	buffer2.Create2D(elementsCount, elementsCount2)
 	buffer.Create2D(elementsCount, elementsCount2)
 	//Load data into buffer instead of allocation
-	b := make([]float32, elementsCount*elementsCount2)
 	for i := 0; i < elementsCount*elementsCount2; i++ {
 		b[i] = float32(i)
 	}
