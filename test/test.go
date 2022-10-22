@@ -6,7 +6,6 @@ import (
 	gc "gocompute"
 	"log"
 	"math"
-	"runtime"
 	"runtime/debug"
 	"time"
 )
@@ -302,7 +301,6 @@ func SpeedTest2(compute *gc.Computing, program int) {
 		seconds = float64(ns) / float64(time.Second)
 		log.Println("D", "Operations count:", count, "M")
 		log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
-		runtime.GC()
 	}
 	buffer.Close()
 	buffer2.Close()
