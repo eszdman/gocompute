@@ -6,6 +6,8 @@ import (
 	gc "gocompute"
 	"log"
 	"math"
+	"runtime"
+	"runtime/debug"
 	"time"
 )
 
@@ -119,9 +121,10 @@ func BufferExample3(compute *gc.Computing, program int) {
 }
 func TextureExample(compute *gc.Computing, program int) {
 	log.Println("D", "TextureExample started")
-	texture := compute.NewTexture(gc.FLOAT32, 4)
+	texture := gc.NewTexture(gc.FLOAT32, 4)
 	texture.Create1D(2)
 	input := []float32{1, 1, 1, 1, 0, 0, 0, 0}
+	gc.InitOutput[float32](texture)
 	texture.Load1DFloat32(input)
 	compute.UseProgram(program)
 	texture.SetBinding(0)
@@ -142,19 +145,20 @@ func TextureExample(compute *gc.Computing, program int) {
 }
 func TextureExample2(compute *gc.Computing, program int) {
 	log.Println("D", "TextureExample2 started")
-	texture := compute.NewTexture(gc.FLOAT32, 4)
+	texture := gc.NewTexture(gc.FLOAT32, 4)
 	points := make([]gc.Vec4, 2)
 	//Write into first point for example
 	points[0].X = 0.25
 	points[0].Y = 0.5
 	texture.Create1D(2)
+	gc.InitOutput[float32](texture)
 	//It's possible to pass structures into texture memory
 	gc.TextureLoad1D(texture, points)
 	compute.UseProgram(program)
 	texture.SetBinding(0)
 	compute.Realize(2, 1, 1)
 	log.Println("D", texture.ReadFloat32())
-	log.Println("D", gc.TextureRead[gc.Vec4](texture))
+	log.Println("D", gc.TextureRead[float32](texture))
 	texture.Close()
 }
 
@@ -237,66 +241,43 @@ func SpeedTest(compute *gc.Computing, program int) {
 }
 
 func SpeedTest2(compute *gc.Computing, program int) {
-	log.Println("D", "SpeedTest started")
-	buffer := compute.NewTexture(gc.FLOAT32, 1)
-	buffer2 := compute.NewTexture(gc.FLOAT32, 1)
-	//elementsCount := 7000
-	//elementsCount2 := 116
+	log.Println("D", "SpeedTest2 started")
 	elementsCount := 8000
-	elementsCount2 := 8000 //TODO fix buffer/texture size, bug works with elementsCount2<200
-	b := make([]float32, elementsCount*elementsCount2)
+	elementsCount2 := 8000
+	debug.SetGCPercent(-1)
+	var b = make([]float32, elementsCount*elementsCount2)
+	var out = make([]float32, elementsCount*elementsCount2)
+	buffer := gc.NewTexture(gc.FLOAT32, 1)
+	buffer2 := gc.NewTexture(gc.FLOAT32, 1)
 	buffer2.Create2D(elementsCount, elementsCount2)
 	buffer.Create2D(elementsCount, elementsCount2)
-	//Load data into buffer instead of allocation
-	for i := 0; i < elementsCount*elementsCount2; i++ {
-		b[i] = float32(i)
+	// Init output slices before the loop to avoid memory leak
+	gc.InitOutput[float32](buffer)
+	gc.InitOutput[float32](buffer2)
+	for j := 1; j < 1000; j++ {
+		//Load data into buffer instead of allocation
+		for i := 0; i < elementsCount*elementsCount2; i++ {
+			b[i] = float32(i)
+		}
+
+		buffer.Load2DFloat32(b)
+		if gc.TextureRead[float32](buffer)[elementsCount*elementsCount2-1] != float32(elementsCount*elementsCount2-1) {
+			log.Println("E", "Wrong buffer value:", gc.TextureRead[float32](buffer2)[elementsCount*elementsCount2-1],
+				"instead of:", float32(elementsCount*elementsCount2-1))
+			break
+		}
+
+		buffer2.Load2DFloat32(out)
+		//Change current program to selected
+		compute.UseProgram(program)
+		//Bind buffer to layout binding
+		buffer.SetBinding(0)
+		buffer2.SetBinding(1)
+		//Run program with size
+		compute.Realize(buffer2.SizeX, buffer2.SizeY, 1)
+		log.Println(j)
+		runtime.GC()
 	}
-
-	buffer.Load2DFloat32(b)
-
-	//Test if bug is fixed
-	if gc.TextureRead[float32](buffer)[elementsCount*elementsCount2-1] != float32(elementsCount*elementsCount2-1) {
-		log.Println("E", "Wrong buffer value:", gc.TextureRead[float32](buffer2)[elementsCount*elementsCount2-1],
-			"instead of:", float32(elementsCount*elementsCount2-1))
-	}
-	buffer2.Load2DFloat32(make([]float32, elementsCount*elementsCount2))
-	//Change current program to selected
-	compute.UseProgram(program)
-	//Bind buffer to layout binding
-	buffer.SetBinding(0)
-	buffer2.SetBinding(1)
-	//Run program with size
-	msStart := time.Now().UnixNano() / int64(time.Nanosecond)
-	compute.Realize(buffer2.SizeX, buffer2.SizeY, 1)
-
-	msEnd := time.Now().UnixNano() / int64(time.Nanosecond)
-	ns := msEnd - msStart
-	log.Println(gc.TextureRead[float32](buffer2)[elementsCount*elementsCount2-1])
-	log.Println("D", "GPU Speed test")
-	log.Println("D", "Time elapsed:", ns, "ns")
-	count := float32(elementsCount*elementsCount2) / 1000000
-	log.Println("D", "Operations count:", count, "M")
-	seconds := float64(ns) / float64(time.Second)
-	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
-
-	in1 := b
-	in2 := make([]float32, elementsCount*elementsCount2)
-	//Compare with CPU
-	msStart = time.Now().UnixNano() / int64(time.Nanosecond)
-	for ind := 0; ind < elementsCount*elementsCount2; ind++ {
-		in2[ind] = float32(ind) + in1[ind]
-	}
-
-	msEnd = time.Now().UnixNano() / int64(time.Nanosecond)
-
-	log.Println("D", "CPU Speed test")
-	ns = msEnd - msStart
-	log.Println("D", "Time elapsed:", ns, "ns")
-	log.Println("D", "Time elapsed:", ns/1000, "ns")
-	count = float32(elementsCount*elementsCount2) / 1000000
-	seconds = float64(ns) / float64(time.Second)
-	log.Println("D", "Operations count:", count, "M")
-	log.Println("D", "Sum per second:", uint64(math.Round(float64(count)/seconds)), "M/s")
 	buffer.Close()
 	buffer2.Close()
 }

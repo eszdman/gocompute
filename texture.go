@@ -1,8 +1,9 @@
 package gocompute
 
 import (
-	"github.com/go-gl/gl/v4.3-core/gl"
 	"unsafe"
+
+	"github.com/go-gl/gl/v4.3-core/gl"
 )
 
 type GpuTexture struct {
@@ -16,6 +17,7 @@ type GpuTexture struct {
 	SizeX    int
 	SizeY    int
 	SizeZ    int
+	Output   interface{}
 }
 type TextureType int
 
@@ -33,8 +35,8 @@ const (
 	FLOAT32
 )
 
-func (c *Computing) NewTexture(texType TextureType, channels int) *GpuTexture {
-	t := &GpuTexture{}
+func NewTexture(texType TextureType, channels int) *GpuTexture {
+	t := GpuTexture{}
 	t.channels = channels
 	t.texType = texType
 	t.levels = 1
@@ -50,7 +52,7 @@ func (c *Computing) NewTexture(texType TextureType, channels int) *GpuTexture {
 		t.typeSize = 2
 	}
 	gl.GenTextures(1, &t.id)
-	return t
+	return &t
 }
 func (t *GpuTexture) Bind() {
 	gl.BindTexture(t.sampler, t.id)
@@ -69,6 +71,11 @@ func (t *GpuTexture) SetLevel(level int) {
 	} else {
 		println("Ignored: Level greater than texture level count!")
 	}
+}
+
+func InitOutput[V any](t *GpuTexture) {
+	size := tSize[V]()
+	t.Output = make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize/size)
 }
 
 func (t *GpuTexture) Create1D(X int) {
@@ -141,12 +148,10 @@ func TextureLoad1D[V any](t *GpuTexture, data []V) {
 
 func TextureRead[V any](t *GpuTexture) []V {
 	t.Bind()
-	size := tSize[V]()
-	output := make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize/size)
 	gl.GetTextureSubImage(t.id, t.level, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), int32(t.SizeZ),
-		t.Format(), t.XType(), int32(t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize), unsafe.Pointer(&output[0]))
+		t.Format(), t.XType(), int32(t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize), unsafe.Pointer(&t.Output.([]V)[0]))
 	checkErr("GetTextureSubImage")
-	return output
+	return t.Output.([]V)
 }
 
 func (t *GpuTexture) SetBinding(number int) {
