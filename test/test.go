@@ -6,8 +6,6 @@ import (
 	gc "gocompute"
 	"log"
 	"math"
-	"runtime"
-	"runtime/debug"
 	"time"
 )
 
@@ -121,10 +119,10 @@ func BufferExample3(compute *gc.Computing, program int) {
 }
 func TextureExample(compute *gc.Computing, program int) {
 	log.Println("D", "TextureExample started")
-	texture := gc.NewTexture(gc.FLOAT32, 4)
+	texture := compute.NewTexture(gc.FLOAT32, 4)
 	texture.Create1D(2)
 	input := []float32{1, 1, 1, 1, 0, 0, 0, 0}
-	gc.InitOutput[float32](texture)
+	gc.InternalBuffer[float32](texture)
 	texture.Load1DFloat32(input)
 	compute.UseProgram(program)
 	texture.SetBinding(0)
@@ -145,13 +143,13 @@ func TextureExample(compute *gc.Computing, program int) {
 }
 func TextureExample2(compute *gc.Computing, program int) {
 	log.Println("D", "TextureExample2 started")
-	texture := gc.NewTexture(gc.FLOAT32, 4)
+	texture := compute.NewTexture(gc.FLOAT32, 4)
 	points := make([]gc.Vec4, 2)
 	//Write into first point for example
 	points[0].X = 0.25
 	points[0].Y = 0.5
 	texture.Create1D(2)
-	gc.InitOutput[float32](texture)
+	gc.InternalBuffer[float32](texture)
 	//It's possible to pass structures into texture memory
 	gc.TextureLoad1D(texture, points)
 	compute.UseProgram(program)
@@ -244,16 +242,17 @@ func SpeedTest2(compute *gc.Computing, program int) {
 	log.Println("D", "SpeedTest2 started")
 	elementsCount := 8000
 	elementsCount2 := 8000
-	debug.SetGCPercent(-1)
 	var b = make([]float32, elementsCount*elementsCount2)
 	var out = make([]float32, elementsCount*elementsCount2)
-	buffer := gc.NewTexture(gc.FLOAT32, 1)
-	buffer2 := gc.NewTexture(gc.FLOAT32, 1)
+	buffer := compute.NewTexture(gc.FLOAT32, 1)
+	buffer2 := compute.NewTexture(gc.FLOAT32, 1)
 	buffer2.Create2D(elementsCount, elementsCount2)
 	buffer.Create2D(elementsCount, elementsCount2)
-	// Init output slices before the loop to avoid memory leak
-	gc.InitOutput[float32](buffer)
-	gc.InitOutput[float32](buffer2)
+	// Init input-output slices before the loop to avoid memory leak
+	gc.InternalBuffer[float32](buffer) //Internal buffer is required for reading texture
+	//Buffer increase stability against garbage collector but memory consumption also
+	gc.InternalBuffer[float32](buffer2)
+
 	for j := 1; j < 1000; j++ {
 		//Load data into buffer instead of allocation
 		for i := 0; i < elementsCount*elementsCount2; i++ {
@@ -261,8 +260,9 @@ func SpeedTest2(compute *gc.Computing, program int) {
 		}
 
 		buffer.Load2DFloat32(b)
+
 		if gc.TextureRead[float32](buffer)[elementsCount*elementsCount2-1] != float32(elementsCount*elementsCount2-1) {
-			log.Println("E", "Wrong buffer value:", gc.TextureRead[float32](buffer2)[elementsCount*elementsCount2-1],
+			log.Println("E", "Wrong buffer value:", gc.TextureRead[float32](buffer)[elementsCount*elementsCount2-1],
 				"instead of:", float32(elementsCount*elementsCount2-1))
 			break
 		}
@@ -276,7 +276,6 @@ func SpeedTest2(compute *gc.Computing, program int) {
 		//Run program with size
 		compute.Realize(buffer2.SizeX, buffer2.SizeY, 1)
 		log.Println(j)
-		runtime.GC()
 	}
 	buffer.Close()
 	buffer2.Close()
@@ -303,7 +302,7 @@ func main() {
 	textureProgram2 := logLoad(compute, textureTest2)
 	functionsProgram := logLoad(compute, functionsTest)
 	speedProgram2 := logLoad(compute, speedTest2)
-	//Buffer usage examples
+	//buffer usage examples
 	BufferExample(compute, bufferProgram)
 	BufferExample2(compute, bufferProgram2)
 	BufferExample3(compute, bufferProgram3)

@@ -46,7 +46,7 @@ func (b *GpuBuffer) Bind() {
 }
 func (b *GpuBuffer) check() bool {
 	if b.id == 0xFFFFFFFF {
-		println("Buffer object with ID:", b.id, "already closed!")
+		println("buffer object with ID:", b.id, "already closed!")
 		return b.id == 0xFFFFFFFF
 	}
 	return false

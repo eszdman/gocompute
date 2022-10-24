@@ -1,6 +1,9 @@
 package gocompute
 
 import (
+	"log"
+	"runtime"
+	"runtime/debug"
 	"unsafe"
 
 	"github.com/go-gl/gl/v4.3-core/gl"
@@ -17,7 +20,7 @@ type GpuTexture struct {
 	SizeX    int
 	SizeY    int
 	SizeZ    int
-	Output   interface{}
+	buffer   interface{}
 }
 type TextureType int
 
@@ -35,7 +38,7 @@ const (
 	FLOAT32
 )
 
-func NewTexture(texType TextureType, channels int) *GpuTexture {
+func (c *Computing) NewTexture(texType TextureType, channels int) *GpuTexture {
 	t := GpuTexture{}
 	t.channels = channels
 	t.texType = texType
@@ -73,9 +76,11 @@ func (t *GpuTexture) SetLevel(level int) {
 	}
 }
 
-func InitOutput[V any](t *GpuTexture) {
+func InternalBuffer[V any](t *GpuTexture) {
+	sys := debug.SetGCPercent(-1)
 	size := tSize[V]()
-	t.Output = make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize/size)
+	t.buffer = make([]V, t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize/size)
+	debug.SetGCPercent(sys)
 }
 
 func (t *GpuTexture) Create1D(X int) {
@@ -118,9 +123,16 @@ func TextureLoad2DRange[V any](t *GpuTexture, data []V, offsetX, offsetY int) {
 	if t.check() {
 		return
 	}
+	sys := debug.SetGCPercent(-1)
 	t.Bind()
-	gl.TexSubImage2D(t.sampler, 0, int32(offsetX), int32(offsetY), int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
+	if t.buffer != nil {
+		copy(t.buffer.([]V), data)
+		gl.TexSubImage2D(t.sampler, 0, int32(offsetX), int32(offsetY), int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&t.buffer.([]V)[0]))
+	} else {
+		gl.TexSubImage2D(t.sampler, 0, int32(offsetX), int32(offsetY), int32(t.SizeX), int32(t.SizeY), t.Format(), t.XType(), unsafe.Pointer(&data[0]))
+	}
 	checkErr("TexSubImage2D")
+	debug.SetGCPercent(sys)
 	//t.UnBind()
 }
 
@@ -148,10 +160,14 @@ func TextureLoad1D[V any](t *GpuTexture, data []V) {
 
 func TextureRead[V any](t *GpuTexture) []V {
 	t.Bind()
-	gl.GetTextureSubImage(t.id, t.level, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), int32(t.SizeZ),
-		t.Format(), t.XType(), int32(t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize), unsafe.Pointer(&t.Output.([]V)[0]))
+	if t.buffer != nil {
+		gl.GetTextureSubImage(t.id, t.level, 0, 0, 0, int32(t.SizeX), int32(t.SizeY), int32(t.SizeZ),
+			t.Format(), t.XType(), int32(t.SizeX*t.SizeY*t.SizeZ*t.channels*t.typeSize), unsafe.Pointer(&t.buffer.([]V)[0]))
+	} else {
+		log.Println("E", "Texture internal buffer is nil! Internal buffer is required for reading texture")
+	}
 	checkErr("GetTextureSubImage")
-	return t.Output.([]V)
+	return t.buffer.([]V)
 }
 
 func (t *GpuTexture) SetBinding(number int) {
@@ -401,6 +417,7 @@ func (t *GpuTexture) Close() {
 	if t.check() {
 		return
 	}
+	runtime.KeepAlive(t.buffer)
 	gl.DeleteTextures(1, &t.id)
 	t.id = 0xFFFFFFFF
 }
