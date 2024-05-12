@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"embed"
@@ -6,6 +6,8 @@ import (
 	gc "gocompute"
 	"log"
 	"math"
+	"strings"
+	"testing"
 	"time"
 )
 
@@ -166,6 +168,7 @@ func FunctionsExample(compute *gc.Computing, program int) {
 	//10 elements buffer zero initialized
 	buffer.LoadFloat32(make([]float32, 16))
 	compute.UseProgram(program)
+	compute.SetInt("N0", 1)
 	buffer.SetBinding(0)
 	//Compute from 1 to 15
 	compute.SetOffset(1, 0, 0)
@@ -282,11 +285,12 @@ func SpeedTest2(compute *gc.Computing, program int) {
 }
 
 // Examples and testing for package functions
-func main() {
+func TestComputing(t *testing.T) {
 	compute, _ := gc.NewComputing(true)
 	//Add include loader firstly for include and functions examples
 	compute.SetIncludeLoader(func(includeName string) string {
-		data, err := includes.ReadFile("resources/include/" + includeName + ".glsl")
+		includeName = strings.Replace(includeName, "\"", "", -1)
+		data, err := includes.ReadFile("resources/include/" + includeName)
 		if err != nil {
 			println("include:", includeName, "not found")
 			return ""
@@ -301,7 +305,7 @@ func main() {
 	textureProgram := logLoad(compute, textureTest)
 	textureProgram2 := logLoad(compute, textureTest2)
 	functionsProgram := logLoad(compute, functionsTest)
-	speedProgram2 := logLoad(compute, speedTest2)
+	//speedProgram2 := logLoad(compute, speedTest2)
 	//buffer usage examples
 	BufferExample(compute, bufferProgram)
 	BufferExample2(compute, bufferProgram2)
@@ -313,7 +317,7 @@ func main() {
 	FunctionsExample(compute, functionsProgram)
 
 	//SpeedTest(compute, bufferProgram)
-	SpeedTest2(compute, speedProgram2)
+	//SpeedTest2(compute, speedProgram2)
 	//Debugger examples
 	//debugger1 := gc.CreateDebugger()
 	//debugger1.StartWindow()
