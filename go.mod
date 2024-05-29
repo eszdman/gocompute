@@ -1,4 +1,4 @@
-module gocompute
+module github.com/eszdman/gocompute
 
 go 1.19
 
