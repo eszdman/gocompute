@@ -56,6 +56,11 @@ func (c *Computing) NewTexture(texType TextureType, channels int) *GpuTexture {
 	gl.GenTextures(1, &t.id)
 	return &t
 }
+
+func (t *GpuTexture) GetID() uint32 {
+	return t.id
+}
+
 func (t *GpuTexture) Bind() {
 	gl.BindTexture(t.sampler, t.id)
 }
