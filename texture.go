@@ -1,7 +1,7 @@
 package gocompute
 
 import (
-	"github.com/go-gl/gl/v4.3-core/gl"
+	"github.com/go-gl/gl/all-core/gl"
 	"log"
 	"runtime"
 	"runtime/debug"
