@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"github.com/go-gl/gl/v4.3-core/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
 	"log"
 	"strconv"
 	"strings"
@@ -33,7 +32,7 @@ func checkErr(operation string) {
 		log.Println(msg)
 	}
 }
-func NewComputing(createContext bool) (*Computing, error) {
+func NewComputing() (*Computing, error) {
 	compute := &Computing{}
 	//Disable include loader by default
 	compute.includeLoader = func(dummy string) string {
@@ -44,27 +43,6 @@ func NewComputing(createContext bool) (*Computing, error) {
 	compute.programs = make(map[int]uint32)
 	compute.defineMap = make(map[string]string)
 	compute.computeGroups = make(map[int]*computeGroup)
-	if createContext {
-		err := glfw.Init()
-		if err != nil {
-			return nil, errors.New("failed to initialize glfw: " + err.Error())
-		}
-		glfw.WindowHint(glfw.ContextVersionMajor, 4)
-		glfw.WindowHint(glfw.ContextVersionMinor, 3)
-		glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
-		glfw.WindowHint(glfw.OpenGLForwardCompatible, 1)
-		glfw.WindowHint(glfw.Visible, glfw.False)
-		window, err := glfw.CreateWindow(1, 1, "Computing", nil, nil)
-		if err != nil {
-			glfw.Terminate()
-			return nil, errors.New("failed to create window: " + err.Error())
-		}
-		window.MakeContextCurrent()
-		err = gl.Init()
-		if err != nil {
-			return nil, err
-		}
-	}
 	return compute, nil
 }
 func (c *Computing) SetInt(name string, input ...int) {

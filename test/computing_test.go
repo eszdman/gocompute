@@ -3,7 +3,9 @@ package test
 import (
 	"embed"
 	_ "embed"
-	gc "gocompute"
+	gc "github.com/eszdman/gocompute"
+	"github.com/go-gl/gl/all-core/gl"
+	"github.com/go-gl/glfw/v3.2/glfw"
 	"log"
 	"math"
 	"strings"
@@ -286,7 +288,31 @@ func SpeedTest2(compute *gc.Computing, program int) {
 
 // Examples and testing for package functions
 func TestComputing(t *testing.T) {
-	compute, _ := gc.NewComputing(true)
+	compute, _ := gc.NewComputing()
+
+	// Create context
+	err := glfw.Init()
+	if err != nil {
+		log.Println("E", "failed to initialize glfw:", err)
+		return
+	}
+	glfw.WindowHint(glfw.ContextVersionMajor, 4)
+	glfw.WindowHint(glfw.ContextVersionMinor, 3)
+	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
+	glfw.WindowHint(glfw.OpenGLForwardCompatible, 1)
+	glfw.WindowHint(glfw.Visible, glfw.False)
+	window, err := glfw.CreateWindow(1, 1, "Computing", nil, nil)
+	if err != nil {
+		glfw.Terminate()
+		log.Println("E", "failed to create window:", err)
+	}
+	window.MakeContextCurrent()
+	err = gl.Init()
+	if err != nil {
+		log.Println("E", err)
+		return
+	}
+
 	//Add include loader firstly for include and functions examples
 	compute.SetIncludeLoader(func(includeName string) string {
 		includeName = strings.Replace(includeName, "\"", "", -1)

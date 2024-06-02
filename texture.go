@@ -1,12 +1,11 @@
 package gocompute
 
 import (
+	"github.com/go-gl/gl/v4.3-core/gl"
 	"log"
 	"runtime"
 	"runtime/debug"
 	"unsafe"
-
-	"github.com/go-gl/gl/v4.3-core/gl"
 )
 
 type GpuTexture struct {
