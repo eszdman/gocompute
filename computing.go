@@ -45,8 +45,17 @@ func NewComputing() (*Computing, error) {
 	compute.computeGroups = make(map[int]*computeGroup)
 	return compute, nil
 }
+
+func (c *Computing) GetCurrentProgramID() uint32 {
+	return c.programs[c.currentProgram]
+}
+
+func (c *Computing) GetUniformLocation(name string) int32 {
+	return gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name+"\x00"))
+}
+
 func (c *Computing) SetInt(name string, input ...int) {
-	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name+"\x00"))
+	address := c.GetUniformLocation(name)
 	if address == -1 {
 		println("SetInt uniform:", name, "not found")
 	}
@@ -64,7 +73,7 @@ func (c *Computing) SetInt(name string, input ...int) {
 }
 
 func (c *Computing) SetFloat32(name string, input ...float32) {
-	address := gl.GetUniformLocation(c.programs[c.currentProgram], gl.Str(name+"\x00"))
+	address := c.GetUniformLocation(name)
 	if address == -1 {
 		println("SetFloat32 uniform:", name, "not found")
 	}
@@ -77,6 +86,10 @@ func (c *Computing) SetFloat32(name string, input ...float32) {
 		gl.Uniform3f(address, input[0], input[1], input[2])
 	case 4:
 		gl.Uniform4f(address, input[0], input[1], input[2], input[2])
+	case 9:
+		gl.UniformMatrix3fv(address, 1, false, &input[0])
+	case 16:
+		gl.UniformMatrix4fv(address, 1, false, &input[0])
 	}
 }
 
