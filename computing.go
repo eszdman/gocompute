@@ -25,13 +25,14 @@ type Computing struct {
 	defineMap       map[string]string
 }
 
-func checkErr(operation string) {
+func CheckErr(operation string) {
 	err := gl.GetError()
 	if err != gl.NO_ERROR {
 		msg := operation + ": glError: " + strconv.Itoa(int(err))
 		log.Println(msg)
 	}
 }
+
 func NewComputing() (*Computing, error) {
 	compute := &Computing{}
 	//Disable include loader by default
@@ -69,7 +70,7 @@ func (c *Computing) SetInt(name string, input ...int) {
 	case 4:
 		gl.Uniform4i(address, int32(input[0]), int32(input[1]), int32(input[2]), int32(input[2]))
 	}
-	checkErr("SetInt:" + name)
+	CheckErr("SetInt:" + name)
 }
 
 func (c *Computing) SetFloat32(name string, input ...float32) {
@@ -157,7 +158,7 @@ func (c *Computing) UseProgram(programNumber int) {
 	}
 	c.currentProgram = programNumber
 	gl.UseProgram(c.programs[c.currentProgram])
-	checkErr("UseProgram")
+	CheckErr("UseProgram")
 }
 func (c *Computing) SetIncludeLoader(loader func(name string) string) {
 	if loader != nil {
@@ -233,6 +234,10 @@ func (c *Computing) preProcess(computeProgram string) string {
 func tSize[V any]() int {
 	var inType V
 	return int(unsafe.Sizeof(inType))
+}
+
+func tSizeInst[V any](d []V) int {
+	return int(unsafe.Sizeof(d[0]))
 }
 
 func (c *Computing) Close() {

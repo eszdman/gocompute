@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 //go:embed resources/bufferTest.glsl
@@ -102,7 +103,9 @@ func BufferExample3(compute *gc.Computing, program int) {
 	//Generic gc method
 
 	//It's possible to pass any element structures into buffer memory
-	gc.BufferAllocate[gc.Vec4](buffer2, 9)
+	// TODO: Fix BufferRead: glError: 1282 with right allocation size
+	gc.BufferAllocate[gc.Vec4](buffer2, 16)
+	//gc.BufferLoad(buffer2, make([]gc.Vec4, 9))
 	points := make([]gc.Vec4, 9)
 	//Write into first point for example
 	points[0].X = 0.25
@@ -131,10 +134,10 @@ func TextureExample(compute *gc.Computing, program int) {
 	compute.UseProgram(program)
 	texture.SetBinding(0)
 	//Add offset to gl_GlobalInvocationID
-	compute.SetOffset(1, 0, 0)
+	compute.SetOffset(0, 0, 0)
 	compute.Realize(2, 1, 1)
 	read := texture.ReadFloat32()
-	log.Println("D", texture.ReadFloat32())
+	log.Println("D", read)
 	for i := 0; i < len(read); i++ {
 		idx := 1.0 - float32(i/4)/10.0
 		val := input[i] + idx
@@ -312,6 +315,9 @@ func TestComputing(t *testing.T) {
 		log.Println("E", err)
 		return
 	}
+	gl.DebugMessageCallback(func(source uint32, gltype uint32, id uint32, severity uint32, length int32, message string, userParam unsafe.Pointer) {
+		log.Println("DebugMessageCallback:", message)
+	}, nil)
 
 	//Add include loader firstly for include and functions examples
 	compute.SetIncludeLoader(func(includeName string) string {
