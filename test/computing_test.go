@@ -76,8 +76,8 @@ func BufferExample(compute *gc.Computing, program int) {
 func BufferExample2(compute *gc.Computing, program int) {
 	log.Println("D", "BufferExample2 started")
 	//Possible to set buffer memory usage hint
-	buffer := compute.NewBufferV(gc.STATIC_READ)
-	buffer2 := compute.NewBufferV(gc.STATIC_WRITE)
+	buffer := compute.NewBufferV(gc.BStaticRead, gc.BStorage)
+	buffer2 := compute.NewBufferV(gc.BStaticWrite, gc.BStorage)
 
 	//Possible to use any structure
 	gc.BufferAllocate[gc.Vec2](buffer2, 9)
@@ -98,8 +98,8 @@ func BufferExample2(compute *gc.Computing, program int) {
 }
 func BufferExample3(compute *gc.Computing, program int) {
 	log.Println("D", "BufferExample3 started")
-	buffer := compute.NewBufferV(gc.STATIC_READ)
-	buffer2 := compute.NewBufferV(gc.STATIC_WRITE)
+	buffer := compute.NewBufferV(gc.BStaticRead, gc.BStorage)
+	buffer2 := compute.NewBufferV(gc.BStaticWrite, gc.BStorage)
 	//Generic gc method
 
 	//It's possible to pass any element structures into buffer memory
@@ -194,8 +194,8 @@ func FunctionsExample(compute *gc.Computing, program int) {
 }
 func SpeedTest(compute *gc.Computing, program int) {
 	log.Println("D", "SpeedTest started")
-	buffer := compute.NewBufferV(gc.STATIC_READ)
-	buffer2 := compute.NewBufferV(gc.STATIC_WRITE)
+	buffer := compute.NewBufferV(gc.BStaticRead, gc.BStorage)
+	buffer2 := compute.NewBufferV(gc.BStaticWrite, gc.BStorage)
 	//Allocate buffer data, maximal buffer 65535
 	elementsCount := 65535
 	buffer2.AllocateFloat32(elementsCount)

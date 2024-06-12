@@ -13,36 +13,45 @@ import (
 type BufferUsage int
 
 const (
-	STATIC_WRITE BufferUsage = gl.STATIC_DRAW
-	STATIC_READ              = gl.STATIC_READ
-	STATIC_COPY              = gl.STATIC_COPY
+	BStaticWrite BufferUsage = gl.STATIC_DRAW
+	BStaticRead              = gl.STATIC_READ
+	BStaticCopy              = gl.STATIC_COPY
 
-	DYNAMIC_WRITE = gl.DYNAMIC_DRAW
-	DYNAMIC_READ  = gl.DYNAMIC_READ
-	DYNAMIC_COPY  = gl.DYNAMIC_COPY
+	BDynamicWrite = gl.DYNAMIC_DRAW
+	BDynamicRead  = gl.DYNAMIC_READ
+	BDynamicCopy  = gl.DYNAMIC_COPY
 
-	STREAM_WRITE = gl.STREAM_DRAW
-	STREAM_READ  = gl.STREAM_READ
-	STREAM_COPY  = gl.STREAM_COPY
+	BStreamDraw = gl.STREAM_DRAW
+	BStreamRead = gl.STREAM_READ
+	BStreamCopy = gl.STREAM_COPY
+)
+
+type BufferType uint32
+
+const (
+	BStorage BufferType = gl.SHADER_STORAGE_BUFFER
+	BUniform            = gl.UNIFORM_BUFFER
 )
 
 type GpuBuffer struct {
 	id    uint32
 	usage BufferUsage
+	bType uint32
 	Size  int
 }
 
 func (c *Computing) NewBuffer() *GpuBuffer {
-	return c.NewBufferV(STATIC_WRITE)
+	return c.NewBufferV(BStaticWrite, BStorage)
 }
-func (c *Computing) NewBufferV(usage BufferUsage) *GpuBuffer {
+func (c *Computing) NewBufferV(usage BufferUsage, bType BufferType) *GpuBuffer {
 	buffer := &GpuBuffer{}
 	buffer.usage = usage
+	buffer.bType = uint32(bType)
 	gl.GenBuffers(1, &buffer.id)
 	return buffer
 }
 func (b *GpuBuffer) Bind() {
-	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, b.id)
+	gl.BindBuffer(b.bType, b.id)
 }
 func (b *GpuBuffer) check() bool {
 	if b.id == 0xFFFFFFFF {
@@ -66,7 +75,7 @@ func BufferAllocateBytes(b *GpuBuffer, size, typeSize int) int {
 	b.Bind()
 	b.Size = size / typeSize
 	//gl.BufferStorage()
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, size*typeSize, nil, uint32(b.usage))
+	gl.BufferData(b.bType, size*typeSize, nil, uint32(b.usage))
 	b.UnBind()
 	return size * typeSize
 }
@@ -78,7 +87,7 @@ func BufferLoad[V any](b *GpuBuffer, data []V) int {
 	typeSize := tSizeInst[V](data)
 	b.Bind()
 	b.Size = len(data)
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, len(data)*typeSize, unsafe.Pointer(&data[0]), uint32(b.usage))
+	gl.BufferData(b.bType, len(data)*typeSize, unsafe.Pointer(&data[0]), uint32(b.usage))
 	b.UnBind()
 	return len(data) * typeSize
 }
@@ -89,19 +98,19 @@ func BufferPartialLoad[V any](b *GpuBuffer, data []V, offsetBytes int) int {
 	typeSize := tSizeInst[V](data)
 	b.Bind()
 	b.Size = len(data)
-	gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, offsetBytes, len(data)*typeSize, unsafe.Pointer(&data[0]))
+	gl.BufferSubData(b.bType, offsetBytes, len(data)*typeSize, unsafe.Pointer(&data[0]))
 	b.UnBind()
 	return len(data) * typeSize
 }
 
 func (b *GpuBuffer) SetBinding(number int) {
-	b.BindBaseV(number, gl.SHADER_STORAGE_BUFFER)
+	b.BindBaseV(number, b.bType)
 }
-func (b *GpuBuffer) BindBaseV(number int, tType int) {
-	gl.BindBufferBase(uint32(tType), uint32(number), b.id)
+func (b *GpuBuffer) BindBaseV(number int, tType uint32) {
+	gl.BindBufferBase(tType, uint32(number), b.id)
 }
 func (b *GpuBuffer) UnBind() {
-	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
+	gl.BindBuffer(b.bType, 0)
 }
 
 func toSlice[V any](pointer unsafe.Pointer, size int) []V {
@@ -118,9 +127,9 @@ func BufferRead[V any](b *GpuBuffer, size int) []V {
 	}
 	typeSize := tSize[V]()
 	b.Bind()
-	buffer := gl.MapBufferRange(gl.SHADER_STORAGE_BUFFER, 0, size*typeSize, gl.MAP_READ_BIT)
+	buffer := gl.MapBufferRange(b.bType, 0, size*typeSize, gl.MAP_READ_BIT)
 	slice := toSlice[V](buffer, size)
-	gl.UnmapBuffer(gl.SHADER_STORAGE_BUFFER)
+	gl.UnmapBuffer(b.bType)
 	CheckErr("BufferRead")
 	//b.UnBind()
 	return slice
@@ -131,9 +140,9 @@ func BufferReadRange[V any](b *GpuBuffer, min, extent int) []V {
 	}
 	typeSize := tSize[V]()
 	b.Bind()
-	buffer := gl.MapBufferRange(gl.SHADER_STORAGE_BUFFER, min, extent*typeSize, gl.MAP_READ_BIT)
+	buffer := gl.MapBufferRange(b.bType, min, extent*typeSize, gl.MAP_READ_BIT)
 	slice := toSlice[V](buffer, extent)
-	gl.UnmapBuffer(gl.SHADER_STORAGE_BUFFER)
+	gl.UnmapBuffer(b.bType)
 	CheckErr("BufferReadRange")
 	//b.UnBind()
 	return slice
